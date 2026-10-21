@@ -1,0 +1,14 @@
+@import "tailwindcss";
+
+:root { --green-dark:#0d3b21; }
+html { scroll-behavior:smooth; }
+body { background:#f4f6f0; }
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-track{background:#e8ede3}
+::-webkit-scrollbar-thumb{background:#9db89a;border-radius:99px}
+@keyframes scanline { 0%{top:4%} 50%{top:92%} 100%{top:4%} }
+@keyframes pulse-ring { 0%{transform:scale(0.9);opacity:.7} 100%{transform:scale(1.6);opacity:0} }
+.scanline{animation:scanline 2.2s ease-in-out infinite}
+.pulse-ring{animation:pulse-ring 1.6s ease-out infinite}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+.fade-up{animation:fadeUp .5s ease both}

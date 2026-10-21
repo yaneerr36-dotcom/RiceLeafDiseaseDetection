@@ -1,0 +1,246 @@
+export type Disease = {
+  id: string;
+  name: string;
+  scientific: string;
+  type: "Fungal" | "Bacterial" | "Viral" | "Pest" | "Healthy";
+  icon: string;
+  color: string;
+  bg: string;
+  yieldLoss: string;
+  spread: "Low" | "Medium" | "High" | "Very High";
+  urgency: "None" | "Low" | "Medium" | "High" | "Critical";
+  season: string;
+  weather: string;
+  symptoms: string[];
+  causes: string;
+  chemical: { name: string; dose: string; timing: string; safety: string }[];
+  organic: string[];
+  cultural: string[];
+  prevention: string[];
+  description: string;
+};
+
+export const DISEASES: Disease[] = [
+  {
+    id: "healthy",
+    name: "Healthy Leaf",
+    scientific: "Oryza sativa — No pathogen detected",
+    type: "Healthy",
+    icon: "🌿",
+    color: "#15803d",
+    bg: "#dcfce7",
+    yieldLoss: "0%",
+    spread: "Low",
+    urgency: "None",
+    season: "All season",
+    weather: "Normal",
+    symptoms: ["Uniform vibrant green colour", "No spots, streaks or lesions", "Intact leaf margins and tip"],
+    causes: "No infection. Balanced nutrition and good field hygiene maintained.",
+    chemical: [],
+    organic: ["Continue neem cake @ 250 kg/ha as basal organic matter", "Maintain bio-fertiliser schedule (Azolla / BGA)"],
+    cultural: ["Keep monitoring twice a week", "Maintain 2–5 cm standing water", "Remove weeds within 20 cm of hills"],
+    prevention: ["Use certified seed", "Balanced NPK — avoid excess nitrogen", "Scout field every 3–4 days"],
+    description: "Leaf shows normal chlorophyll, venation and turgor. RiceLeafXNet found no lesion texture or discolouration pattern.",
+  },
+  {
+    id: "leaf-blast",
+    name: "Leaf Blast",
+    scientific: "Magnaporthe oryzae (Pyricularia oryzae)",
+    type: "Fungal",
+    icon: "🔥",
+    color: "#dc2626",
+    bg: "#fee2e2",
+    yieldLoss: "30–70%",
+    spread: "Very High",
+    urgency: "Critical",
+    season: "Kharif / Wet season, tillering–panicle stage",
+    weather: "<20°C, >90% RH, leaf wetness >10h, cloudy days",
+    symptoms: ["Spindle / eye-shaped spots with grey centre", "Brown to reddish-brown pointed ends", "Spots coalesce, leaf dries from tip", "Neck blast can snap panicle in later stage"],
+    causes: "Airborne conidia of Magnaporthe oryzae. Excess N, close spacing and prolonged dew favour explosive spread.",
+    chemical: [
+      { name: "Tricyclazole 75% WP", dose: "0.6 g / L water (120g / acre)", timing: "At first spots, repeat after 12–15 days", safety: "Wear mask & gloves, PHI 30 days" },
+      { name: "Azoxystrobin 23% SC", dose: "1 ml / L water", timing: "Tillering & booting stage if pressure high", safety: "Avoid spraying in wind, PHI 28 days" },
+      { name: "Isoprothiolane 40% EC", dose: "1.5 ml / L water", timing: "Alternative rotation to prevent resistance", safety: "Keep away from ponds / fish" },
+    ],
+    organic: ["Spray Pseudomonas fluorescens @ 10 g/L in evening", "Neem seed kernel extract (NSKE) 5% — early stage only", "Silicon-rich rice husk ash to harden leaf tissue"],
+    cultural: ["Drain field for 2–3 days to reduce humidity", "Stop urea top-dressing immediately", "Remove & burn severely infected leaves away from field", "Widen spacing in next crop to 20×15 cm"],
+    prevention: ["Grow resistant varieties (BRRI dhan 71, Bina 17)", "Seed treatment with Tricyclazole before sowing", "Balanced fertiliser — split N, add potash & silicon", "Avoid late evening irrigation"],
+    description: "Most destructive rice disease worldwide. Eye-shaped lesions are diagnostic. Can destroy entire crop in 10–15 days under favourable weather.",
+  },
+  {
+    id: "brown-spot",
+    name: "Brown Spot",
+    scientific: "Bipolaris oryzae (Cochliobolus miyabeanus)",
+    type: "Fungal",
+    icon: "🟤",
+    color: "#92400e",
+    bg: "#fef3c7",
+    yieldLoss: "15–45%",
+    spread: "High",
+    urgency: "High",
+    season: "Nutrient-poor soils, drought-prone areas",
+    weather: "25–30°C, high humidity, K & Si deficient soil",
+    symptoms: ["Small circular dark-brown spots, sesame-seed size", "Grey centre in mature spots", "Spots on grains cause discolouration & poor filling", "Seedling blight in nursery"],
+    causes: "Seed & soil-borne fungus. Strongly linked to potassium, silicon and micronutrient deficiency and water stress.",
+    chemical: [
+      { name: "Mancozeb 75% WP", dose: "2.5 g / L water", timing: "2 sprays, 12 days apart from tillering", safety: "PHI 21 days, wash hands after use" },
+      { name: "Propiconazole 25% EC", dose: "1 ml / L water", timing: "When >5% leaves show spots", safety: "Do not mix with alkaline products" },
+    ],
+    organic: ["Foliar spray of cow-dung slurry filtrate (10%)", "Trichoderma viride @ 5 g/L as preventive spray", "Apply wood ash / rice husk ash for K + Silicon"],
+    cultural: ["Apply potash (MOP) @ 20 kg/acre immediately", "Maintain shallow standing water — avoid drought stress", "Use clean, hot-water treated seed (52°C, 30 min)"],
+    prevention: ["Soil test & correct K, Zn, Si deficiency", "Seed treatment with Carbendazim 2 g/kg seed", "Balanced nutrition prevents 60% of cases"],
+    description: "Disease of poor soils. Circular brown spots distinguish it from blast. Correcting nutrition is as important as fungicide.",
+  },
+  {
+    id: "bacterial-leaf-blight",
+    name: "Bacterial Leaf Blight",
+    scientific: "Xanthomonas oryzae pv. oryzae",
+    type: "Bacterial",
+    icon: "🦠",
+    color: "#b45309",
+    bg: "#fef3c7",
+    yieldLoss: "20–60%",
+    spread: "Very High",
+    urgency: "Critical",
+    season: "Monsoon, after floods / storms",
+    weather: "25–34°C, heavy rain, flooding, windy weather",
+    symptoms: ["Water-soaked yellow wavy streaks from leaf tip / margin", "Streaks turn white-grey, leaf dries (Kresek in seedlings)", "Milky bacterial ooze drops in morning", "Whole field looks scorched in severe cases"],
+    causes: "Bacterium enters through wounds & hydathodes, spreads by rain splash, flood water and contaminated tools.",
+    chemical: [
+      { name: "Streptocycline + Copper Oxychloride", dose: "0.15 g + 3 g / L water", timing: "At first streaks, repeat after 12 days", safety: "Antibiotic — use only when confirmed, PHI 30d" },
+      { name: "Copper Hydroxide 77% WP", dose: "3 g / L water", timing: "Preventive after storm / flood damage", safety: "Avoid spraying at noon heat" },
+    ],
+    organic: ["Spray fresh cow-dung extract 20% — suppresses bacteria", "Neem leaf extract 10% at early stage", "Bleaching powder @ 10 kg/acre in irrigation water (field sanitation)"],
+    cultural: ["Drain excess water immediately, keep field just moist", "Stop nitrogen — excess N worsens BLB rapidly", "Do NOT walk through wet infected field to healthy field", "Burn infected stubble after harvest"],
+    prevention: ["Resistant varieties (BRRI dhan 49, Swarna-Sub1 areas)", "Avoid field-to-field irrigation flow", "Seed treatment with hot water 52–54°C", "Balanced N, avoid late urea"],
+    description: "Fastest spreading bacterial disease after storms. Wavy yellow margins progressing from tip are diagnostic. No cure — only suppression.",
+  },
+  {
+    id: "leaf-scald",
+    name: "Leaf Scald",
+    scientific: "Microdochium oryzae (Rhynchosporium oryzae)",
+    type: "Fungal",
+    icon: "〰️",
+    color: "#0e7490",
+    bg: "#e0f2fe",
+    yieldLoss: "10–30%",
+    spread: "Medium",
+    urgency: "Medium",
+    season: "Late wet season, mature leaves",
+    weather: "High humidity, excess nitrogen, dense canopy",
+    symptoms: ["Zonate, wavy bands from leaf tip — light & dark zones", "Scalded, bleached appearance at tip", "Margins dry, centre may stay green"],
+    causes: "Fungus favoured by dense, over-fertilised canopy and prolonged leaf wetness in late season.",
+    chemical: [
+      { name: "Carbendazim 50% WP", dose: "1 g / L water", timing: "Single spray at symptom onset", safety: "PHI 21 days" },
+      { name: "Hexaconazole 5% EC", dose: "2 ml / L water", timing: "If spreading to flag leaf", safety: "Rotate fungicide group" },
+    ],
+    organic: ["Pseudomonas fluorescens 10 g/L foliar spray", "Reduce canopy humidity by draining 2 days"],
+    cultural: ["Avoid excess urea in late tillering", "Remove heavily scalded lower leaves", "Ensure proper spacing & airflow"],
+    prevention: ["Split nitrogen application", "Use tolerant varieties", "Field sanitation after harvest"],
+    description: "Zonate scalding from tip downwards. Often confused with BLB but wavy zonation and no bacterial ooze separates it.",
+  },
+  {
+    id: "narrow-brown-spot",
+    name: "Narrow Brown Spot",
+    scientific: "Cercospora janseana (Sphaerulina oryzina)",
+    type: "Fungal",
+    icon: "📏",
+    color: "#7c2d12",
+    bg: "#ffedd5",
+    yieldLoss: "10–25%",
+    spread: "Medium",
+    urgency: "Medium",
+    season: "Late season, near maturity",
+    weather: "Warm, humid, K-deficient fields",
+    symptoms: ["Very narrow, short brown lines along leaf veins", "Reddish-brown, 2–10 mm long, parallel to midrib", "Premature leaf senescence"],
+    causes: "Cercospora fungus surviving on stubble. Worse in late varieties & potash-deficient soil.",
+    chemical: [
+      { name: "Propiconazole 25% EC", dose: "1 ml / L", timing: "At heading if flag leaf affected", safety: "PHI 28 days" },
+    ],
+    organic: ["Potash foliar spray 1% MOP", "Trichoderma preventive spray at tillering"],
+    cultural: ["Apply MOP @ 15–20 kg/acre", "Plough in stubble deeply after harvest"],
+    prevention: ["Early-maturing varieties escape disease", "Correct K deficiency", "Clean seed & field sanitation"],
+    description: "Narrow vein-limited brown streaks. Usually late-season — protect flag leaf to save grain filling.",
+  },
+  {
+    id: "sheath-blight",
+    name: "Sheath Blight",
+    scientific: "Rhizoctonia solani AG1-IA",
+    type: "Fungal",
+    icon: "🐍",
+    color: "#065f46",
+    bg: "#d1fae5",
+    yieldLoss: "20–50%",
+    spread: "High",
+    urgency: "High",
+    season: "Maximum tillering to heading",
+    weather: "28–32°C, >95% RH, dense planting, excess N",
+    symptoms: ["Oval grey-green spots on sheath near water line", "Spots enlarge with brown border, snake-skin pattern", "White mycelium & brown sclerotia on sheath", "Leaves above infected sheath die"],
+    causes: "Soil-borne fungus, sclerotia float on water and infect sheath at water line. Spreads hill-to-hill rapidly.",
+    chemical: [
+      { name: "Validamycin 3% L", dose: "2.5 ml / L water — spray at base", timing: "At first sheath spots, repeat 12 days", safety: "Spray must reach lower sheath" },
+      { name: "Azoxystrobin + Difenoconazole", dose: "1 ml / L", timing: "Severe cases, heading stage", safety: "PHI 30 days" },
+    ],
+    organic: ["Trichoderma harzianum soil application 2.5 kg/acre with FYM", "Pseudomonas spray directed at sheath base", "Neem cake basal application suppresses sclerotia"],
+    cultural: ["Drain water for 3–4 days", "Wider spacing, remove infected tillers", "Avoid excess nitrogen & dense canopy", "Clean bunds — weeds host the fungus"],
+    prevention: ["Avoid very close transplanting", "Balanced fertilisation, add potash", "Deep summer ploughing exposes sclerotia"],
+    description: "Second most important rice disease after blast. Starts at water line and climbs — early base spraying is critical.",
+  },
+  {
+    id: "tungro",
+    name: "Rice Tungro Disease",
+    scientific: "RTBV + RTSV — Green Leafhopper transmitted",
+    type: "Viral",
+    icon: "🦗",
+    color: "#a16207",
+    bg: "#fef9c3",
+    yieldLoss: "40–100%",
+    spread: "Very High",
+    urgency: "Critical",
+    season: "Where green leafhopper (Nephotettix) is active",
+    weather: "Warm season with high leafhopper population",
+    symptoms: ["Severe stunting, reduced tillering", "Yellow-orange discolouration from leaf tip", "Twisted, drooping leaves", "Delayed / no panicle, empty grains"],
+    causes: "Two viruses transmitted together by green leafhopper. No chemical cure — vector control & resistant varieties are only options.",
+    chemical: [
+      { name: "Imidacloprid 17.8% SL (vector only)", dose: "0.3 ml / L", timing: "Only if leafhopper >5/hill — controls vector, not virus", safety: "Toxic to bees — spray evening only" },
+    ],
+    organic: ["Neem oil 0.5% spray repels leafhopper", "Light traps (1/acre) to monitor & mass trap hoppers", "Reflective mulch in nursery repels vector"],
+    cultural: ["ROGUING: Uproot & bury infected hills immediately", "Synchronous planting with neighbours (within 3 weeks)", "Leave field fallow 1 month between crops to break cycle", "Plough stubble right after harvest"],
+    prevention: ["Tungro-resistant varieties (BRRI dhan 33, Matatag)", "Protect nursery with net / seed treatment", "Avoid ratooning infected crop"],
+    description: "Most devastating viral disease. Infected plants never recover — remove them and stop the leafhopper or lose the whole field.",
+  },
+  {
+    id: "bakanae",
+    name: "Bakanae / Foolish Seedling",
+    scientific: "Fusarium fujikuroi (Gibberella fujikuroi)",
+    type: "Fungal",
+    icon: "📈",
+    color: "#9d174d",
+    bg: "#fce7f3",
+    yieldLoss: "10–30%",
+    spread: "Medium",
+    urgency: "Medium",
+    season: "Nursery to early tillering",
+    weather: "Seed-borne — infected seed is main source",
+    symptoms: ["Abnormally tall, thin, pale yellow seedlings", "Foot rot — brown at base, plant topples", "White-pink fungal growth at nodes", "Empty panicles in survivors"],
+    causes: "Seed-borne Fusarium produces gibberellin hormone causing foolish elongation. Spreads via infected seed lots.",
+    chemical: [
+      { name: "Carbendazim seed treatment", dose: "2 g / kg seed before sowing", timing: "Seed treatment only — foliar spray not effective", safety: "Treat in shade, dry before sowing" },
+    ],
+    organic: ["Hot water seed treatment 52°C for 30 minutes", "Trichoderma seed coating 4 g/kg seed", "Salt water seed selection — discard floating seeds"],
+    cultural: ["Uproot tall infected seedlings in nursery, burn", "Newer use seed from infected field", "Use certified seed every season"],
+    prevention: ["Certified / treated seed is 90% prevention", "Nursery inspection before transplanting", "Rotate seed source"],
+    description: "Foolishly tall pale seedlings are unmistakable. Entirely seed-driven — clean seed prevents it completely.",
+  },
+];
+
+export const SAMPLES = [
+  { id: "healthy", label: "Healthy", diseaseId: "healthy" },
+  { id: "blast", label: "Leaf Blast", diseaseId: "leaf-blast" },
+  { id: "brown", label: "Brown Spot", diseaseId: "brown-spot" },
+  { id: "blight", label: "Bacterial Blight", diseaseId: "bacterial-leaf-blight" },
+];
+
+export function getDisease(id: string) {
+  return DISEASES.find((d) => d.id === id) || DISEASES[0];
+}
