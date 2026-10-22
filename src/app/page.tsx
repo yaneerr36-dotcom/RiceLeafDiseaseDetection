@@ -20,8 +20,8 @@ function sevColor(s: string) { return s === "Critical" ? "#dc2626" : s === "High
 
 export default function Page() {
   const [tab, setTab] = useState<string>("detect");
-  const [preview, setPreview] = useState<string>("");
-  const [fileName, setFileName] = useState("healthy-leaf.jpg");
+ const [preview, setPreview] = useState<string>("/images/healthy-rice.png");
+const [fileName, setFileName] = useState("healthy-rice.png");
   const [drag, setDrag] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [step, setStep] = useState(0);
@@ -117,10 +117,12 @@ export default function Page() {
     setToast(`RiceLeafXNet: ${disease.name} detected (${res.confidence}%)`);
   }
 
-  function onFile(file: File) {
-    const url = URL.createObjectURL(file); setPreview(url); setFileName(file.name); setResult(null);
-  }
-
+ function onFile(file: File) {
+  const url = URL.createObjectURL(file);
+  setPreview(url);
+  setFileName(file.name);
+  setResult(null);
+}
   async function feedback(id: number, fb: string) { await fetch(`/api/scans/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ feedback: fb }) }); setToast(fb === "correct" ? "Thanks! Feedback helps retrain RiceLeafXNet" : "Feedback recorded — our agronomist will review"); loadData(); }
   async function delScan(id: number) { await fetch(`/api/scans/${id}`, { method: "DELETE" }); loadData(); setToast("Scan deleted"); }
   async function submitConsult() { await fetch("/api/consultations", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...cForm, diseaseName: cForm.diseaseName || result?.disease.name || "", scanId: result?.scanId || null }) }); setConsult(false); setToast("Consultation booked — agronomist will call within 4 hours"); loadData(); }
@@ -165,11 +167,42 @@ export default function Page() {
                 </div>
 
                 <div onDragOver={e => { e.preventDefault(); setDrag(true); }} onDragLeave={() => setDrag(false)} onDrop={e => { e.preventDefault(); setDrag(false); const f = e.dataTransfer.files[0]; if (f) onFile(f); }} onClick={() => fileRef.current?.click()} className={`relative mt-4 flex h-64 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed transition ${drag ? "border-emerald-600 bg-emerald-50" : "border-slate-300 bg-slate-50"}`}>
-                  <div className="flex flex-col items-center justify-center p-4 text-center">
-                    <FileImage className="h-12 w-12 text-emerald-700" />
-                    <p className="mt-2 text-sm font-bold text-slate-700">{fileName}</p>
-                    <p className="text-xs text-slate-400">Click or drop a leaf file here</p>
-                  </div>
+                  
+
+{preview && preview !== "sample" ? (
+  <div className="absolute inset-0">
+    <img
+      src={preview}
+      alt="Rice leaf"
+      className="h-full w-full bg-slate-100 object-contain"
+    />
+
+    {preview === "/images/healthy-rice.png" && (
+      <div className="absolute inset-x-0 bottom-0 bg-black/65 px-3 py-4 text-center text-white">
+        <p className="text-base font-bold">
+          Choose a Rice Leaf Image
+        </p>
+        <p className="mt-1 text-xs">
+          Upload your own image to detect rice leaf diseases.
+        </p>
+        <p className="mt-2 text-xs font-semibold text-amber-300">
+          Click here to upload
+        </p>
+      </div>
+    )}
+  </div>
+) : (
+  <div className="flex flex-col items-center justify-center p-4 text-center">
+    <FileImage className="h-12 w-12 text-emerald-700" />
+    <p className="mt-2 text-sm font-bold text-slate-700">
+      {fileName}
+    </p>
+    <p className="text-xs text-slate-400">
+      Click or drop a leaf file here
+    </p>
+  </div>
+)}
+
                   {analyzing && <div className="absolute inset-0 bg-black/35 flex flex-col items-center justify-center text-white"><BrainCircuit className="h-10 w-10 animate-pulse" /><p className="mt-2 text-sm font-bold">RiceLeafXNet is analysing…</p><p className="text-xs text-amber-300">{STEPS[step]}</p></div>}
                   <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) onFile(f); }} />
                 </div>
@@ -274,6 +307,9 @@ export default function Page() {
           <label className="block"><span className="text-xs font-bold text-slate-500">Urgency</span><select value={cForm.urgency} onChange={e => setCForm({ ...cForm, urgency: e.target.value })} className="mt-1 w-full rounded-xl border px-3 py-2.5 text-sm"><option>Low</option><option>Medium</option><option>High</option><option>Critical — crop dying</option></select></label>
           <label className="block"><span className="text-xs font-bold text-slate-500">Your question</span><textarea rows={3} value={cForm.question} onChange={e => setCForm({ ...cForm, question: e.target.value })} className="mt-1 w-full rounded-xl border px-3 py-2.5 text-sm outline-none focus:border-emerald-600" /></label>
           <button onClick={submitConsult} className="w-full rounded-full bg-amber-400 py-3 text-sm font-black text-[#0d3b21]">Request Callback (within 4 hrs)</button></div></div></div>}
+   
+
+
     </div>
   );
 }
