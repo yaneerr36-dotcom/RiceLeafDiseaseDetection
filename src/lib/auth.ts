@@ -5,18 +5,20 @@ import { db } from "@/db";
 import { user, session, account, verification } from "@/db/schema";
 
 const productionUrl =
-  "https://rice-leaf-disease-detection-git-clean-main-rice-7b1e.vercel.app";
+  "https://rice-leaf-disease-detection-ashen.vercel.app";
 
 export const auth = betterAuth({
   secret: process.env.BETTER_AUTH_SECRET,
 
-  baseURL: productionUrl,
+  baseURL: process.env.BETTER_AUTH_URL || productionUrl,
 
   trustedOrigins: [
     "http://localhost:3000",
     "http://localhost:3001",
     productionUrl,
-    "https://rice-leaf-disease-detection-1jhyqb3sk-rice-7b1e.vercel.app",
+    ...(process.env.BETTER_AUTH_URL
+      ? [process.env.BETTER_AUTH_URL]
+      : []),
   ],
 
   database: drizzleAdapter(db, {
