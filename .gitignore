@@ -1,5 +1,26 @@
-node_modules
-.next
+# Dependencies
+node_modules/
+
+# Next.js
+.next/
+out/
+build/
+
+# Environment variables
 .env
 .env.*
 !.env.example
+
+# IDE
+.idea/
+
+# Database backups
+*.dump
+*.sql
+
+# Python
+__pycache__/
+*.py[cod]
+
+# TypeScript
+*.tsbuildinfo

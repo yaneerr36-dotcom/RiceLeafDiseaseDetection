@@ -74,37 +74,112 @@ const [fileName, setFileName] = useState("healthy-rice.png");
       yellow = Math.round(y / tot * 100);
     } catch {}
 
-    const hash = Math.abs((name || src).split("").reduce((a, ch) => a * 33 + ch.charCodeAt(0), 9));
-    let diseaseId = forcedId;
+   
+const hash = Math.abs((name || src).split("").reduce((a, ch) => a * 33 + ch.charCodeAt(0), 9));
 
-    if (!diseaseId) {
-      if (green > 55 && brown < 8 && yellow < 8) {
-        diseaseId = "healthy";
-      } else if (brown > yellow && brown > 12) {
-        diseaseId = hash % 2 === 0 ? "leaf-blast" : "brown-spot";
-      } else if (yellow > brown && yellow > 12) {
-        diseaseId = hash % 2 === 0 ? "bacterial-leaf-blight" : "tungro";
-      } else {
-        const fallbackList = ["leaf-blast", "brown-spot", "bacterial-leaf-blight", "sheath-blight", "leaf-scald", "narrow-brown-spot", "bakanae", "tungro"];
-        diseaseId = fallbackList[hash % fallbackList.length];
-      }
+let diseaseId = forcedId;
+let confidence = 0;
+let predictions: { label: string; confidence: number }[] = [];
+
+if (forcedId) {
+  // Keep existing sample buttons as demo mode
+  const sampleDisease = getDisease(forcedId);
+  confidence = sampleDisease.id === "healthy"
+    ? 97.5 + (hash % 20) / 10
+    : 89.0 + (hash % 90) / 10;
+
+  const others = DISEASES
+    .filter(d => d.id !== sampleDisease.id)
+    .sort((a, b) => ((hash + a.id.length) % 7) - ((hash + b.id.length) % 7))
+    .slice(0, 3);
+
+  const rest = 100 - confidence;
+
+  predictions = [
+    { label: sampleDisease.name, confidence: +confidence.toFixed(1) },
+    ...others.map((o, i) => ({
+      label: o.name,
+      confidence: +(rest * (0.6 - i * 0.18)).toFixed(1)
+    }))
+  ];
+} else {
+  // Real image prediction using Random Forest V3
+  try {
+    const imageResponse = await fetch(src);
+
+    if (!imageResponse.ok) {
+      throw new Error("Cannot read selected image");
     }
 
-    const disease = getDisease(diseaseId);
-    const isHealthy = disease.id === "healthy";
-    const affected = isHealthy ? Math.max(1, brown + yellow) : Math.min(85, Math.max(12, brown + yellow + (hash % 20)));
-    const severityScore = isHealthy ? affected : Math.min(98, affected + 22);
-    const severity = isHealthy ? "None" : severityScore > 72 ? "Critical" : severityScore > 54 ? "High" : severityScore > 35 ? "Moderate" : "Low";
-    const confidence = isHealthy ? 97.5 + (hash % 20) / 10 : 89.0 + (hash % 90) / 10;
-    
-    const others = DISEASES.filter(d => d.id !== disease.id).sort((a, b) => ((hash + a.id.length) % 7) - ((hash + b.id.length) % 7)).slice(0, 3);
-    const rest = 100 - confidence;
-    const predictions = [
-      { label: disease.name, confidence: +confidence.toFixed(1) }, 
-      ...others.map((o, i) => ({ label: o.name, confidence: +(rest * (0.6 - i * 0.18)).toFixed(1) }))
-    ];
+    const imageBlob = await imageResponse.blob();
+    const formData = new FormData();
 
-    const res: Result = { disease, confidence: +confidence.toFixed(1), severity, severityScore, health: Math.max(5, 100 - severityScore), affected: +affected.toFixed(1), predictions, image: src, fileName: name || fileName, green, brown, yellow };
+    formData.append("file", imageBlob, name || "rice-leaf.jpg");
+
+    const predictionResponse = await fetch("/api/predict", {
+      method: "POST",
+      body: formData
+    });
+
+    const prediction = await predictionResponse.json();
+
+    if (!predictionResponse.ok || !prediction.success) {
+      throw new Error(prediction.error || prediction.detail || "Prediction failed");
+    }
+
+    diseaseId = prediction.diseaseId;
+    confidence = Number(prediction.confidence);
+
+    predictions = prediction.predictions.map(
+      (item: { label: string; confidence: number }) => ({
+        label: getDisease(item.label).name,
+        confidence: Number(item.confidence)
+      })
+    );
+  } catch (error) {
+    console.error("RiceLeaf AI prediction error:", error);
+    setAnalyzing(false);
+    setToast("Prediction failed. Please check the AI server.");
+    return;
+  }
+}
+
+const disease = getDisease(diseaseId || "healthy");
+const isHealthy = disease.id === "healthy";
+
+const affected = isHealthy
+  ? Math.max(1, brown + yellow)
+  : Math.min(85, Math.max(12, brown + yellow));
+
+const severityScore = isHealthy
+  ? affected
+  : Math.min(98, affected + 22);
+
+const severity = isHealthy
+  ? "None"
+  : severityScore > 72
+    ? "Critical"
+    : severityScore > 54
+      ? "High"
+      : severityScore > 35
+        ? "Moderate"
+        : "Low";
+
+const res: Result = {
+  disease,
+  confidence: +confidence.toFixed(1),
+  severity,
+  severityScore,
+  health: Math.max(5, 100 - severityScore),
+  affected: +affected.toFixed(1),
+  predictions,
+  image: src,
+  fileName: name || fileName,
+  green,
+  brown,
+  yellow
+};
+
     
     try {
       const saved = await fetch("/api/scans", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ imageName: res.fileName, diseaseId: disease.id, diseaseName: disease.name, confidence: res.confidence, severity, severityScore, leafHealthScore: res.health, affectedArea: res.affected, location, farmerName: farmer, fieldId, isHealthy, topPredictions: predictions }) }).then(r => r.json());
@@ -138,7 +213,7 @@ const [fileName, setFileName] = useState("healthy-rice.png");
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3">
           <div className="flex items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-400 text-[#0d3b21]"><Leaf className="h-6 w-6" /></div>
-            <div><p className="text-lg font-black leading-none tracking-tight">RiceLeaf<span className="text-amber-400">XNet</span></p><p className="text-[11px] text-emerald-200">AI Rice Disease Detection & Remedies • Deep Learning</p></div>
+            <div><p className="text-lg font-black leading-none tracking-tight">RiceLeaf<span className="text-amber-400">XNet</span></p><p className="text-[11px] text-emerald-200">AI Rice Disease Detection & Remedies • Machine Learning</p></div>
           </div>
           <div className="hidden items-center gap-2 lg:flex">
             <span className="flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-xs"><span className="h-2 w-2 rounded-full bg-emerald-400" /> Model v2.4 Online</span>
@@ -266,20 +341,167 @@ const [fileName, setFileName] = useState("healthy-rice.png");
           </div>
         )}
 
+        
         {tab === "model" && (
           <div className="fade-up space-y-5">
-            <div><h2 className="text-2xl font-black">RiceLeafXNet — Novel Architecture</h2><p className="max-w-3xl text-sm text-slate-500">A lightweight custom CNN designed for on-device rice pathology: MBConv backbone (inverted residuals), CBAM channel+spatial attention to focus on lesions, and a regularised classification head trained on 18,442 field images with augmentation & focal loss.</p></div>
+            <div>
+              <h2 className="text-2xl font-black">RiceLeafXNet - Random Forest V3</h2>
+              <p className="max-w-3xl text-sm text-slate-500">
+                A machine learning classifier for rice leaf disease detection.
+                It extracts HSV colour histogram, HOG and LBP features from
+                leaf images, selects 4,087 features, and uses a Random Forest
+                ensemble to classify 9 rice leaf conditions.
+              </p>
+            </div>
+
             <div className="flex flex-wrap items-center gap-2 overflow-x-auto rounded-3xl bg-[#0d3b21] p-5 text-white">
-              {[["Input", "224×224 leaf image", Camera], ["Stem Conv", "3×3 • BN • Swish", Layers], ["MBConv ×7", "Inverted residual blocks", Cpu], ["CBAM Attention", "Channel + Spatial focus", Eye], ["Feature Fusion", "Multi-scale 7×7 + 14×14", Layers], ["Global Avg Pool", "1280-d vector", Activity], ["FC Head + Dropout", "256 → 9 (Softmax)", BrainCircuit]].map(([t, s, Icon]: any, i, arr) => <div key={t} className="flex items-center gap-2"><div className="w-36 rounded-2xl bg-white/10 p-3 text-center ring-1 ring-white/15"><Icon className="mx-auto h-6 w-6 text-amber-400" /><p className="mt-1 text-xs font-black">{t}</p><p className="text-[10px] leading-tight text-emerald-200">{s}</p></div>{i < arr.length - 1 && <ChevronRight className="h-5 w-5 shrink-0 text-amber-400" />}</div>)}
+              {[
+                ["Image Input", "Rice leaf image", Camera],
+                ["Feature Extraction", "HSV + HOG + LBP", Layers],
+                ["Feature Vector", "8,174 original features", Activity],
+                ["Feature Selection", "4,087 selected features", Eye],
+                ["Random Forest V3", "Ensemble decision trees", Cpu],
+                ["Prediction", "One of 9 classes", BrainCircuit]
+              ].map(([t, s, Icon]: any, i, arr) => (
+                <div key={t} className="flex items-center gap-2">
+                  <div className="w-36 rounded-2xl bg-white/10 p-3 text-center ring-1 ring-white/15">
+                    <Icon className="mx-auto h-6 w-6 text-amber-400" />
+                    <p className="mt-1 text-xs font-black">{t}</p>
+                    <p className="text-[10px] leading-tight text-emerald-200">{s}</p>
+                  </div>
+                  {i < arr.length - 1 && (
+                    <ChevronRight className="h-5 w-5 shrink-0 text-amber-400" />
+                  )}
+                </div>
+              ))}
             </div>
+
             <div className="grid gap-5 lg:grid-cols-3">
-              <div className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-black/5"><h3 className="flex items-center gap-2 font-black"><Award className="h-5 w-5 text-emerald-700" /> Test Performance</h3><div className="mt-3 space-y-3">{[["Accuracy", 98.72], ["Precision", 98.41], ["Recall", 98.15], ["F1-Score", 98.28], ["AUC-ROC", 99.31]].map(([l, v]: any) => <div key={l}><div className="flex justify-between text-xs font-bold"><span>{l}</span><span>{v}%</span></div><div className="mt-1 h-2.5 rounded-full bg-slate-100"><div className="h-full rounded-full bg-emerald-600" style={{ width: v + "%" }} /></div></div>)}<div className="grid grid-cols-3 gap-2 pt-2 text-center text-xs">{[["8.4M", "Params"], ["32 MB", "TFLite size"], ["42ms", "Phone CPU"]].map(([v, l]) => <div key={l} className="rounded-xl bg-slate-50 p-2"><b className="block text-sm">{v}</b>{l}</div>)}</div></div></div>
-              <div className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-black/5"><h3 className="font-black">vs. Baseline Models</h3><table className="mt-3 w-full text-sm"><thead><tr className="text-left text-xs text-slate-400"><th className="py-1">Model</th><th>Acc.</th><th>F1</th><th>Size</th></tr></thead><tbody>{[["VGG16", "92.84%", "92.1", "528MB"], ["ResNet50", "94.27%", "93.8", "98MB"], ["MobileNetV2", "93.51%", "93.0", "14MB"], ["EfficientNet-B0", "96.18%", "95.9", "21MB"], ["RiceLeafXNet (Ours)", "98.72%", "98.3", "32MB"]].map(r => <tr key={r[0]} className={`border-t ${r[0].includes("Ours") ? "font-black text-emerald-800" : ""}`}><td className="py-2">{r[0]}</td><td>{r[1]}</td><td>{r[2]}</td><td>{r[3]}</td></tr>)}</tbody></table><p className="mt-2 text-[11px] text-slate-400">Dataset: 18,442 images • 9 classes • 80/10/10 split • 5-fold CV ±0.34%</p></div>
-              <div className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-black/5"><h3 className="font-black">Training Curve</h3><div className="h-52"><ResponsiveContainer width="100%" height="100%"><LineChart data={[{ e: 1, acc: 71, val: 68 }, { e: 5, acc: 86, val: 83 }, { e: 10, acc: 92, val: 90 }, { e: 20, acc: 96, val: 94 }, { e: 30, acc: 98, val: 97 }, { e: 40, acc: 99.1, val: 98.7 }]}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="e" label={{ value: "Epoch", position: "insideBottom", offset: -2, fontSize: 11 }} tick={{ fontSize: 11 }} /><YAxis domain={[60, 100]} tick={{ fontSize: 11 }} /><Tooltip /><Line type="monotone" dataKey="acc" name="Train" stroke="#16a34a" strokeWidth={2} /><Line type="monotone" dataKey="val" name="Val" stroke="#d97706" strokeWidth={2} /></LineChart></ResponsiveContainer></div><p className="text-[11px] text-slate-400">AdamW • lr 3e-4 cosine • Focal loss γ=2 • Aug: flip, rotate, CutMix, colour jitter</p></div>
+              <div className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-black/5">
+                <h3 className="flex items-center gap-2 font-black">
+                  <Award className="h-5 w-5 text-emerald-700" />
+                  Test Performance
+                </h3>
+
+                <div className="mt-3 space-y-3">
+                  {[
+                    ["Accuracy", 89.09],
+                    ["Macro Precision", 90.35],
+                    ["Macro Recall", 89.51],
+                    ["Macro F1-Score", 89.68],
+                    ["Macro AUC-ROC", 98.93]
+                  ].map(([l, v]: any) => (
+                    <div key={l}>
+                      <div className="flex justify-between text-xs font-bold">
+                        <span>{l}</span>
+                        <span>{v}%</span>
+                      </div>
+                      <div className="mt-1 h-2.5 rounded-full bg-slate-100">
+                        <div
+                          className="h-full rounded-full bg-emerald-600"
+                          style={{ width: v + "%" }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 pt-4 text-center text-xs">
+                  {[
+                    ["9", "Classes"],
+                    ["8,174", "Raw Features"],
+                    ["4,087", "Selected"]
+                  ].map(([v, l]) => (
+                    <div key={l} className="rounded-xl bg-slate-50 p-2">
+                      <b className="block text-sm">{v}</b>
+                      {l}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-black/5">
+                <h3 className="font-black">Feature Extraction</h3>
+                <p className="mt-1 text-xs text-slate-500">
+                  Original image feature configuration
+                </p>
+
+                <div className="mt-4 space-y-3">
+                  {[
+                    ["HSV Histogram", "48"],
+                    ["HOG", "8,100"],
+                    ["LBP", "26"]
+                  ].map(([name, count]) => (
+                    <div key={name} className="flex items-center justify-between rounded-xl bg-slate-50 p-3">
+                      <span className="text-sm font-semibold">{name}</span>
+                      <b className="text-sm text-emerald-700">{count}</b>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-3 rounded-2xl bg-[#0d3b21] p-4 text-white">
+                  <p className="text-xs text-emerald-200">Total Original Features</p>
+                  <p className="mt-1 text-2xl font-black">8,174</p>
+                  <div className="my-3 border-t border-white/20" />
+                  <p className="text-xs text-emerald-200">Features Selected for Model</p>
+                  <p className="mt-1 text-2xl font-black text-amber-400">4,087</p>
+                </div>
+              </div>
+
+              <div className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-black/5">
+                <h3 className="font-black">Evaluation Summary</h3>
+
+                <div className="mt-4 space-y-3">
+                  {[
+                    ["Test Images", "541"],
+                    ["Correct Predictions", "482"],
+                    ["Test Accuracy", "89.09%"],
+                    ["Validation Accuracy", "88.30%"],
+                    ["Validation Macro F1", "87.21%"]
+                  ].map(([label, value]) => (
+                    <div key={label} className="flex items-center justify-between border-b border-slate-100 pb-2">
+                      <span className="text-xs text-slate-500">{label}</span>
+                      <b className="text-sm">{value}</b>
+                    </div>
+                  ))}
+                </div>
+
+                <p className="mt-4 text-[11px] leading-relaxed text-slate-400">
+                  Test metrics are measured on the Random Forest V3 test set.
+                  Validation and test results are reported separately.
+                </p>
+              </div>
             </div>
-            <div className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-black/5"><h3 className="font-black">Confusion Highlights — Per-Class Accuracy</h3><div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-5 lg:grid-cols-9">{DISEASES.map((d, i) => <div key={d.id} className="rounded-2xl p-3 text-center text-white" style={{ background: d.color }}><p className="text-lg font-black">{(99.4 - i * 0.55).toFixed(1)}%</p><p className="text-[10px] font-bold leading-tight">{d.name}</p></div>)}</div><p className="mt-3 text-xs text-slate-500">Hardest pair: Leaf Scald ↔ Bacterial Blight (overlapping tip necrosis) — resolved by CBAM attention on margin zonation. Full pipeline in this demo runs a pixel-analysis simulation in-browser; connect a TFLite / ONNX endpoint to serve the real weights.</p></div>
+
+            <div className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-black/5">
+              <h3 className="font-black">Supported Rice Leaf Disease Classes</h3>
+              <p className="mt-1 text-xs text-slate-500">
+                Random Forest V3 classification outputs
+              </p>
+
+              <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-5 lg:grid-cols-9">
+                {DISEASES.map((d) => (
+                  <div
+                    key={d.id}
+                    className="rounded-2xl p-3 text-center text-white"
+                    style={{ background: d.color }}
+                  >
+                    <p className="text-[10px] font-bold leading-tight">{d.name}</p>
+                    <p className="mt-1 text-[9px] opacity-80">{d.id}</p>
+                  </div>
+                ))}
+              </div>
+
+              <p className="mt-4 text-xs leading-relaxed text-slate-500">
+                The model predicts disease classes and confidence scores.
+                Severity and affected-area indicators displayed by the
+                application are separate estimates and are not direct
+                Random Forest model outputs.
+              </p>
+            </div>
           </div>
         )}
+
 
         {tab === "history" && (
           <div className="fade-up">
@@ -290,7 +512,7 @@ const [fileName, setFileName] = useState("healthy-rice.png");
         )}
       </main>
 
-      <footer className="bg-[#0d3b21] py-8 text-center text-sm text-emerald-200"><p className="font-black text-white">RiceLeafXNet <span className="text-amber-400">•</span> AI-Based Rice Leaf Disease Classification using Deep Learning</p><p className="mt-1 text-xs">Always confirm critical diagnoses with a local agronomist before chemical application. Follow label dose & PHI.</p></footer>
+      <footer className="bg-[#0d3b21] py-8 text-center text-sm text-emerald-200"><p className="font-black text-white">RiceLeafXNet <span className="text-amber-400">•</span> AI-Based Rice Leaf Disease Classification using Machine Learning</p><p className="mt-1 text-xs">Always confirm critical diagnoses with a local agronomist before chemical application. Follow label dose & PHI.</p></footer>
 
       {selected && <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-0 sm:items-center sm:p-4" onClick={() => setSelected(null)}><div onClick={e => e.stopPropagation()} className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-t-3xl bg-white sm:rounded-3xl fade-up"><div className="p-5"><div className="flex items-start justify-between"><div><span className="rounded-full px-2.5 py-1 text-[11px] font-black" style={{ background: selected.bg, color: selected.color }}>{selected.type}</span><h3 className="mt-2 text-2xl font-black">{selected.name}</h3><p className="text-sm italic text-slate-400">{selected.scientific}</p></div><button onClick={() => setSelected(null)} className="rounded-full bg-slate-100 p-2"><X className="h-5 w-5" /></button></div>
         <div className="mt-3 grid grid-cols-3 gap-2 text-center text-xs">{[["Yield Loss", selected.yieldLoss], ["Spread Rate", selected.spread], ["Favourable Weather", selected.weather]].map(([l, v]) => <div key={l} className="rounded-xl bg-slate-50 p-2"><b className="block text-[13px]">{v}</b>{l}</div>)}</div>

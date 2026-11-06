@@ -35,3 +35,5 @@ export const consultations = pgTable("consultations", {
 
 export type Scan = typeof scans.$inferSelect;
 export type Consultation = typeof consultations.$inferSelect;
+export { user, session, account, verification } from "./auth-schema";
+
