@@ -215,11 +215,7 @@ const res: Result = {
             <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-400 text-[#0d3b21]"><Leaf className="h-6 w-6" /></div>
             <div><p className="text-lg font-black leading-none tracking-tight">RiceLeaf<span className="text-amber-400">XNet</span></p><p className="text-[11px] text-emerald-200">AI Rice Disease Detection & Remedies • Machine Learning</p></div>
           </div>
-          <div className="hidden items-center gap-2 lg:flex">
-            <span className="flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-xs"><span className="h-2 w-2 rounded-full bg-emerald-400" /> Model v2.4 Online</span>
-            <span className="rounded-full bg-amber-400 px-3 py-1.5 text-xs font-bold text-[#0d3b21]">98.72% Accuracy</span>
-          </div>
-        </div>
+                 </div>
         <nav className="border-t border-white/10"><div className="mx-auto flex max-w-7xl gap-1 overflow-x-auto px-4 py-2">
           {NAV.map(n => <button key={n.id} onClick={() => setTab(n.id)} className={`flex shrink-0 items-center gap-2 rounded-full px-4 py-2 text-[13px] font-semibold transition ${tab === n.id ? "bg-white text-[#0d3b21]" : "text-emerald-100 hover:bg-white/10"}`}><n.icon className="h-4 w-4" />{n.label}</button>)}
         </div></nav>
