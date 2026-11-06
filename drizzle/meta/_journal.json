@@ -15,6 +15,13 @@
       "when": 1792684181026,
       "tag": "0001_auth-tables",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793975747296,
+      "tag": "0002_fancy_betty_ross",
+      "breakpoints": true
     }
   ]
 }

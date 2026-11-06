@@ -1,5 +1,7 @@
 "use client";
 import { useEffect, useRef, useState, useCallback } from "react";
+import { authClient } from "@/lib/auth-client";
+import { useRouter } from "next/navigation";
 import { DISEASES, SAMPLES, getDisease, type Disease } from "@/lib/diseases";
 import { Leaf, Upload, ScanLine, BrainCircuit, ShieldCheck, Activity, History, BookOpen, BarChart3, X, Check, AlertTriangle, Droplets, FlaskConical, Sprout, Bug, MapPin, User, Trash2, Search, ChevronRight, Sparkles, Camera, RefreshCw, Phone, Clock, TrendingUp, Microscope, Layers, Cpu, Zap, Award, FileImage, Eye, ThumbsUp, ThumbsDown, MessageCircle, Sun, CloudRain } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, CartesianGrid, AreaChart, Area } from "recharts";
@@ -19,6 +21,8 @@ const STEPS = ["Preprocessing 224×224 • Normalisation", "RiceLeafXNet Backbon
 function sevColor(s: string) { return s === "Critical" ? "#dc2626" : s === "High" ? "#ea580c" : s === "Moderate" ? "#d97706" : s === "Low" ? "#65a30d" : "#16a34a"; }
 
 export default function Page() {
+const router = useRouter();
+const { data: authSession, isPending: authPending } = authClient.useSession();
   const [tab, setTab] = useState<string>("detect");
  const [preview, setPreview] = useState<string>("/images/healthy-rice.png");
 const [fileName, setFileName] = useState("healthy-rice.png");
@@ -41,40 +45,77 @@ const [fileName, setFileName] = useState("healthy-rice.png");
   const [cForm, setCForm] = useState({ farmerName: "Rahim Uddin", phone: "", location: "Mymensingh, Bangladesh", question: "", urgency: "Medium", diseaseName: "" });
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const loadData = useCallback(async () => {
-    try {
-      const [a, b] = await Promise.all([fetch("/api/scans?limit=60").then(r => r.json()), fetch("/api/stats").then(r => r.json())]);
-      setScans(a.scans || []); setStats(b);
-    } catch {}
-  }, []);
-  useEffect(() => { loadData(); }, [loadData]);
+ const loadData = useCallback(async () => {
+  if (!authSession) {
+    setScans([]);
+    setStats(null);
+    return;
+  }
+
+  try {
+    const [scansResponse, statsResponse] = await Promise.all([
+      fetch("/api/scans?limit=60"),
+      fetch("/api/stats"),
+    ]);
+
+    if (scansResponse.status === 401 || statsResponse.status === 401) {
+      router.push("/login");
+      return;
+    }
+
+    if (!scansResponse.ok || !statsResponse.ok) {
+      throw new Error("Unable to load account data");
+    }
+
+    const a = await scansResponse.json();
+    const b = await statsResponse.json();
+
+    setScans(a.scans || []);
+    setStats(b);
+  } catch (error) {
+    console.error("Load account data error:", error);
+  }
+}, [authSession, router]);
+
+useEffect(() => {
+  if (!authPending && authSession) {
+    loadData();
+  }
+}, [authPending, authSession, loadData]);
   useEffect(() => { if (toast) { const t = setTimeout(() => setToast(""), 3200); return () => clearTimeout(t); } }, [toast]);
 
   async function analyze(src: string, forcedId?: string, name?: string) {
+    if (authPending) return;
+
+    if (!authSession) {
+      router.push("/login");
+      return;
+    }
+
     setAnalyzing(true); setResult(null); setStep(0);
     for (let i = 0; i < STEPS.length; i++) { setStep(i); await new Promise(r => setTimeout(r, 520)); }
-    
+
     let green = 60, brown = 15, yellow = 10;
     try {
-      const img = new Image(); img.crossOrigin = "anonymous"; 
+      const img = new Image(); img.crossOrigin = "anonymous";
       await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = src; });
-      const c = document.createElement("canvas"); c.width = 100; c.height = 100; 
+      const c = document.createElement("canvas"); c.width = 100; c.height = 100;
       const ctx = c.getContext("2d")!; ctx.drawImage(img, 0, 0, 100, 100);
-      const d = ctx.getImageData(0, 0, 100, 100).data; 
+      const d = ctx.getImageData(0, 0, 100, 100).data;
       let g = 0, br = 0, y = 0, tot = 0;
-      for (let i = 0; i < d.length; i += 4) { 
-        const r = d[i], gg = d[i + 1], b = d[i + 2]; 
-        tot++; 
-        if (gg > r + 15 && gg > b + 10 && gg > 60) g++; 
-        else if (r > 80 && r > gg + 8 && gg < 140) br++; 
-        else if (r > 130 && gg > 110 && b < 100) y++; 
+      for (let i = 0; i < d.length; i += 4) {
+        const r = d[i], gg = d[i + 1], b = d[i + 2];
+        tot++;
+        if (gg > r + 15 && gg > b + 10 && gg > 60) g++;
+        else if (r > 80 && r > gg + 8 && gg < 140) br++;
+        else if (r > 130 && gg > 110 && b < 100) y++;
       }
-      green = Math.round(g / tot * 100); 
-      brown = Math.round(br / tot * 100); 
+      green = Math.round(g / tot * 100);
+      brown = Math.round(br / tot * 100);
       yellow = Math.round(y / tot * 100);
     } catch {}
 
-   
+
 const hash = Math.abs((name || src).split("").reduce((a, ch) => a * 33 + ch.charCodeAt(0), 9));
 
 let diseaseId = forcedId;
@@ -180,15 +221,45 @@ const res: Result = {
   yellow
 };
 
-    
-    try {
-      const saved = await fetch("/api/scans", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ imageName: res.fileName, diseaseId: disease.id, diseaseName: disease.name, confidence: res.confidence, severity, severityScore, leafHealthScore: res.health, affectedArea: res.affected, location, farmerName: farmer, fieldId, isHealthy, topPredictions: predictions }) }).then(r => r.json());
-      if (saved.scan) res.scanId = saved.scan.id;
-      loadData();
-    } catch {}
 
-    setResult(res); 
-    setAnalyzing(false); 
+   try {
+  const saveResponse = await fetch("/api/scans", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      imageName: res.fileName,
+      diseaseId: disease.id,
+      diseaseName: disease.name,
+      confidence: res.confidence,
+      severity,
+      severityScore,
+      leafHealthScore: res.health,
+      affectedArea: res.affected,
+      location,
+      farmerName: farmer,
+      fieldId,
+      isHealthy,
+      topPredictions: predictions,
+    }),
+  });
+
+  const saved = await saveResponse.json();
+
+  if (saveResponse.status === 401) {
+    setToast("Please log in to save your prediction.");
+    router.push("/login");
+  } else if (!saveResponse.ok || !saved.scan) {
+    setToast("Prediction completed, but the result could not be saved.");
+  } else {
+    res.scanId = saved.scan.id;
+    await loadData();
+  }
+} catch (error) {
+  console.error("Save prediction error:", error);
+  setToast("Prediction completed, but the result could not be saved.");
+}
+    setResult(res);
+    setAnalyzing(false);
     setToast(`RiceLeafXNet: ${disease.name} detected (${res.confidence}%)`);
   }
 
@@ -198,8 +269,60 @@ const res: Result = {
   setFileName(file.name);
   setResult(null);
 }
-  async function feedback(id: number, fb: string) { await fetch(`/api/scans/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ feedback: fb }) }); setToast(fb === "correct" ? "Thanks! Feedback helps retrain RiceLeafXNet" : "Feedback recorded — our agronomist will review"); loadData(); }
-  async function delScan(id: number) { await fetch(`/api/scans/${id}`, { method: "DELETE" }); loadData(); setToast("Scan deleted"); }
+ async function feedback(id: number, fb: string) {
+  try {
+    const response = await fetch(`/api/scans/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ feedback: fb }),
+    });
+
+    if (response.status === 401) {
+      router.push("/login");
+      return;
+    }
+
+    if (!response.ok) {
+      setToast("Unable to update feedback. Please try again.");
+      return;
+    }
+
+    setToast(
+      fb === "correct"
+        ? "Thanks! Feedback helps retrain RiceLeafXNet"
+        : "Feedback recorded — our agronomist will review"
+    );
+
+    await loadData();
+  } catch (error) {
+    console.error("Feedback error:", error);
+    setToast("Unable to update feedback. Please try again.");
+  }
+}
+
+async function delScan(id: number) {
+  try {
+    const response = await fetch(`/api/scans/${id}`, {
+      method: "DELETE",
+    });
+
+    if (response.status === 401) {
+      router.push("/login");
+      return;
+    }
+
+    if (!response.ok) {
+      setToast("Unable to delete scan. Please try again.");
+      return;
+    }
+
+    setToast("Scan deleted");
+    await loadData();
+  } catch (error) {
+    console.error("Delete scan error:", error);
+    setToast("Unable to delete scan. Please try again.");
+  }
+}
   async function submitConsult() { await fetch("/api/consultations", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...cForm, diseaseName: cForm.diseaseName || result?.disease.name || "", scanId: result?.scanId || null }) }); setConsult(false); setToast("Consultation booked — agronomist will call within 4 hours"); loadData(); }
 
   const filtered = DISEASES.filter(d => (typeFilter === "All" || d.type === typeFilter) && (d.name.toLowerCase().includes(search.toLowerCase()) || d.scientific.toLowerCase().includes(search.toLowerCase())));
@@ -215,9 +338,42 @@ const res: Result = {
             <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-400 text-[#0d3b21]"><Leaf className="h-6 w-6" /></div>
             <div><p className="text-lg font-black leading-none tracking-tight">RiceLeaf<span className="text-amber-400">XNet</span></p><p className="text-[11px] text-emerald-200">AI Rice Disease Detection & Remedies • Machine Learning</p></div>
           </div>
-                 </div>
+
+{!authPending && (
+  authSession ? (
+    <button
+      onClick={async () => {
+        await authClient.signOut();
+        setScans([]);
+        setStats(null);
+        setTab("detect");
+        router.refresh();
+        router.push("/");
+      }}
+      className="shrink-0 rounded-full bg-amber-400 px-5 py-2 text-sm font-bold text-[#0d3b21] transition hover:bg-amber-300"
+    >
+      Logout
+    </button>
+  ) : (
+    <button
+      onClick={() => router.push("/login")}
+      className="shrink-0 rounded-full bg-amber-400 px-5 py-2 text-sm font-bold text-[#0d3b21] transition hover:bg-amber-300"
+    >
+      Login / Register
+    </button>
+  )
+)}
+
+          </div>
         <nav className="border-t border-white/10"><div className="mx-auto flex max-w-7xl gap-1 overflow-x-auto px-4 py-2">
-          {NAV.map(n => <button key={n.id} onClick={() => setTab(n.id)} className={`flex shrink-0 items-center gap-2 rounded-full px-4 py-2 text-[13px] font-semibold transition ${tab === n.id ? "bg-white text-[#0d3b21]" : "text-emerald-100 hover:bg-white/10"}`}><n.icon className="h-4 w-4" />{n.label}</button>)}
+        {NAV.map(n => <button key={n.id} onClick={() => {
+  if ((n.id === "dashboard" || n.id === "history") && authPending) return;
+  if ((n.id === "dashboard" || n.id === "history") && !authSession) {
+    router.push("/login");
+    return;
+  }
+  setTab(n.id);
+}} className={`flex shrink-0 items-center gap-2 rounded-full px-4 py-2 text-[13px] font-semibold transition ${tab === n.id ? "bg-white text-[#0d3b21]" : "text-emerald-100 hover:bg-white/10"}`}><n.icon className="h-4 w-4" />{n.label}</button>)}
         </div></nav>
       </header>
 
@@ -238,7 +394,7 @@ const res: Result = {
                 </div>
 
                 <div onDragOver={e => { e.preventDefault(); setDrag(true); }} onDragLeave={() => setDrag(false)} onDrop={e => { e.preventDefault(); setDrag(false); const f = e.dataTransfer.files[0]; if (f) onFile(f); }} onClick={() => fileRef.current?.click()} className={`relative mt-4 flex h-64 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed transition ${drag ? "border-emerald-600 bg-emerald-50" : "border-slate-300 bg-slate-50"}`}>
-                  
+
 
 {preview && preview !== "sample" ? (
   <div className="absolute inset-0">
@@ -337,7 +493,7 @@ const res: Result = {
           </div>
         )}
 
-        
+
         {tab === "model" && (
           <div className="fade-up space-y-5">
             <div>
@@ -525,7 +681,7 @@ const res: Result = {
           <label className="block"><span className="text-xs font-bold text-slate-500">Urgency</span><select value={cForm.urgency} onChange={e => setCForm({ ...cForm, urgency: e.target.value })} className="mt-1 w-full rounded-xl border px-3 py-2.5 text-sm"><option>Low</option><option>Medium</option><option>High</option><option>Critical — crop dying</option></select></label>
           <label className="block"><span className="text-xs font-bold text-slate-500">Your question</span><textarea rows={3} value={cForm.question} onChange={e => setCForm({ ...cForm, question: e.target.value })} className="mt-1 w-full rounded-xl border px-3 py-2.5 text-sm outline-none focus:border-emerald-600" /></label>
           <button onClick={submitConsult} className="w-full rounded-full bg-amber-400 py-3 text-sm font-black text-[#0d3b21]">Request Callback (within 4 hrs)</button></div></div></div>}
-   
+
 
 
     </div>

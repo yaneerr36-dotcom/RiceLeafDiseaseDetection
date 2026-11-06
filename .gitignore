@@ -16,11 +16,13 @@ build/
 
 # Database backups
 *.dump
-*.sql
-
+*.sql`r`n!drizzle/*.sql
 # Python
 __pycache__/
 *.py[cod]
 
 # TypeScript
 *.tsbuildinfo
+
+# Android icon backup
+android/res_backup_before_icon/
