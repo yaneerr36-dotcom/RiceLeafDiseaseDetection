@@ -5,7 +5,7 @@ const config: CapacitorConfig = {
   appName: 'RiceLeafXNet',
   webDir: 'out',
   server: {
-    url: 'https://rice-leaf-x-net-git-main-rice-7b1e.vercel.app',
+    url: 'https://rice-leaf-disease-detection-ashen.vercel.app',
     cleartext: false
   }
 };

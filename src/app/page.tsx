@@ -16,7 +16,7 @@ const NAV = [
   { id: "history", label: "Scan History", icon: History },
 ] as const;
 
-const STEPS = ["Preprocessing 224×224 • Normalisation", "RiceLeafXNet Backbone — Feature Extraction", "CBAM Attention — Lesion Localisation", "Classification Head — 9 Classes", "Severity Estimation & Remedy Retrieval"];
+const STEPS = ["Preprocessing 224\u00d7224 \u2022 Normalisation", "RiceLeafXNet Backbone \u2014 Feature Extraction", "CBAM Attention \u2014 Lesion Localisation", "Classification Head — 9 Classes", "Severity Estimation & Remedy Retrieval"];
 
 function sevColor(s: string) { return s === "Critical" ? "#dc2626" : s === "High" ? "#ea580c" : s === "Moderate" ? "#d97706" : s === "Low" ? "#65a30d" : "#16a34a"; }
 
@@ -290,7 +290,7 @@ const res: Result = {
     setToast(
       fb === "correct"
         ? "Thanks! Feedback helps retrain RiceLeafXNet"
-        : "Feedback recorded — our agronomist will review"
+        : "Feedback recorded \u2014 our agronomist will review"
     );
 
     await loadData();
@@ -323,7 +323,7 @@ async function delScan(id: number) {
     setToast("Unable to delete scan. Please try again.");
   }
 }
-  async function submitConsult() { await fetch("/api/consultations", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...cForm, diseaseName: cForm.diseaseName || result?.disease.name || "", scanId: result?.scanId || null }) }); setConsult(false); setToast("Consultation booked — agronomist will call within 4 hours"); loadData(); }
+  async function submitConsult() { await fetch("/api/consultations", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...cForm, diseaseName: cForm.diseaseName || result?.disease.name || "", scanId: result?.scanId || null }) }); setConsult(false); setToast("Consultation booked \u2014 agronomist will call within 4 hours"); loadData(); }
 
   const filtered = DISEASES.filter(d => (typeFilter === "All" || d.type === typeFilter) && (d.name.toLowerCase().includes(search.toLowerCase()) || d.scientific.toLowerCase().includes(search.toLowerCase())));
   const diseaseChart = stats?.byDisease ? Object.entries(stats.byDisease).map(([name, value]) => ({ name: name.replace("Bacterial Leaf Blight", "Bacterial Blight"), value })) : DISEASES.slice(1, 6).map(d => ({ name: d.name, value: 0 }));
@@ -501,7 +501,7 @@ async function delScan(id: number) {
               <p className="max-w-3xl text-sm text-slate-500">
                 A machine learning classifier for rice leaf disease detection.
                 It extracts HSV colour histogram, HOG and LBP features from
-                leaf images, selects 4,087 features, and uses a Random Forest
+                leaf images, selects 2,043 features, and uses a Random Forest
                 ensemble to classify 9 rice leaf conditions.
               </p>
             </div>
@@ -511,8 +511,8 @@ async function delScan(id: number) {
                 ["Image Input", "Rice leaf image", Camera],
                 ["Feature Extraction", "HSV + HOG + LBP", Layers],
                 ["Feature Vector", "8,174 original features", Activity],
-                ["Feature Selection", "4,087 selected features", Eye],
-                ["Random Forest V3", "Ensemble decision trees", Cpu],
+                ["Feature Selection", "2,043 selected features", Eye],
+                ["Random Forest V3", "300 decision trees", Cpu],
                 ["Prediction", "One of 9 classes", BrainCircuit]
               ].map(([t, s, Icon]: any, i, arr) => (
                 <div key={t} className="flex items-center gap-2">
@@ -537,11 +537,10 @@ async function delScan(id: number) {
 
                 <div className="mt-3 space-y-3">
                   {[
-                    ["Accuracy", 89.09],
-                    ["Macro Precision", 90.35],
-                    ["Macro Recall", 89.51],
-                    ["Macro F1-Score", 89.68],
-                    ["Macro AUC-ROC", 98.93]
+                    ["Accuracy", 89.22],
+                    ["Macro Precision", 91.18],
+                    ["Macro Recall", 87.77],
+                    ["Macro F1-Score", 88.85],
                   ].map(([l, v]: any) => (
                     <div key={l}>
                       <div className="flex justify-between text-xs font-bold">
@@ -562,7 +561,7 @@ async function delScan(id: number) {
                   {[
                     ["9", "Classes"],
                     ["8,174", "Raw Features"],
-                    ["4,087", "Selected"]
+                    ["2,043", "Selected"]
                   ].map(([v, l]) => (
                     <div key={l} className="rounded-xl bg-slate-50 p-2">
                       <b className="block text-sm">{v}</b>
@@ -596,7 +595,7 @@ async function delScan(id: number) {
                   <p className="mt-1 text-2xl font-black">8,174</p>
                   <div className="my-3 border-t border-white/20" />
                   <p className="text-xs text-emerald-200">Features Selected for Model</p>
-                  <p className="mt-1 text-2xl font-black text-amber-400">4,087</p>
+                  <p className="mt-1 text-2xl font-black text-amber-400">2,043</p>
                 </div>
               </div>
 
@@ -605,11 +604,9 @@ async function delScan(id: number) {
 
                 <div className="mt-4 space-y-3">
                   {[
-                    ["Test Images", "541"],
-                    ["Correct Predictions", "482"],
-                    ["Test Accuracy", "89.09%"],
-                    ["Validation Accuracy", "88.30%"],
-                    ["Validation Macro F1", "87.21%"]
+                    ["Test Images", "1,067"],
+                    ["Correct Predictions", "952"],
+                    ["Test Accuracy", "89.22%"],
                   ].map(([label, value]) => (
                     <div key={label} className="flex items-center justify-between border-b border-slate-100 pb-2">
                       <span className="text-xs text-slate-500">{label}</span>
@@ -619,8 +616,7 @@ async function delScan(id: number) {
                 </div>
 
                 <p className="mt-4 text-[11px] leading-relaxed text-slate-400">
-                  Test metrics are measured on the Random Forest V3 test set.
-                  Validation and test results are reported separately.
+                  Metrics are calculated using the held-out 20% test set.
                 </p>
               </div>
             </div>
